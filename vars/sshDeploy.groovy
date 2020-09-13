@@ -69,7 +69,7 @@ def call(yaml, boolean dryRun) {
                             echo identityFile
                             echo passphrase
                             String identity = new File(identityFile).text
-                            echo fileContents
+                            echo identity
                             remote.user = user
                             remote.identity = identity
                             remote.passphrase = passphrase
