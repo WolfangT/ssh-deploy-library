@@ -103,6 +103,7 @@ def call(yaml, String stages, boolean dryRun) {
                                 remote.gateway = gateway
                             }
                         }
+                        remote
                     }
 
                     // Execute in parallel.
