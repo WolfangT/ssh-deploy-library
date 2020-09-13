@@ -65,6 +65,9 @@ def call(yaml, boolean dryRun) {
                             remote.password = params.PASSWORD
                             isSudo = true
                         } else {
+                            echo user
+                            echo identityFile
+                            echo passphrase
                             remote.user = user
                             remote.identityFile = identityFile
                             remote.passphrase = passphrase
