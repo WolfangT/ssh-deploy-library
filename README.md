@@ -23,6 +23,19 @@ you can generate a key of that kind using
 
     ssh-keygen -t rsa -b 4096 -m PEM
 
+## stages pattern
+
+Added a fucntionality to pass a regex pattern that mathes stages to be executed,
+this can be usefull to define both testing and production deployments stages
+and indicate on the Jenkinsfile for example in wich deployment stage to execute
+based on the current branch or other factor
+
+    sshDeploy('dev/deploy.sh') # Executes all stages
+
+    sshDeploy('dev/deploy.sh', 'production') # Executes only the production stage
+
+    sshDeploy('dev/deploy.sh', 'testing.*') # Executes stages that start with 'testing'
+
 ## Sample YML file:
 
 
@@ -62,11 +75,12 @@ command_groups:
         - 'test.sh'
 
 steps:
-  deploy:
+  production:
     - remote_groups:
         - r_group_1
       command_groups:
         - c_group_1
+  testing_node03:
     - remote_groups:
         - r_group_2
       command_groups:

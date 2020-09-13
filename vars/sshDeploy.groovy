@@ -1,15 +1,15 @@
 #!/usr/bin/groovy
 
 def call(String yamlName) {
-    sshDeploy(yamlName, false)
+    sshDeploy(yamlName, ".*", false)
 }
 
-def call(String yamlName, boolean dryRun) {
+def call(String yamlName, String stages, boolean dryRun) {
     def yaml = readYaml file: yamlName
-    sshDeploy(yaml, dryRun)
+    sshDeploy(yaml, stages, dryRun)
 }
 
-def call(yaml, boolean dryRun) {
+def call(yaml, String stages, boolean dryRun) {
     if(!yaml.config)
         error "config missing in the given yml file."
     if(!yaml.config.credentials_id)
@@ -20,95 +20,101 @@ def call(yaml, boolean dryRun) {
 
     withCredentials([sshUserPrivateKey(credentialsId: yaml.config.credentials_id, keyFileVariable: 'identityFile', passphraseVariable: 'passphrase', usernameVariable: 'user')]) {
 
-        // TODO reinstante checks
-        /*if(!userName && params.SSH_USER) {
-            error "userName is null or empty, please check credentials_id."
+        if(!user && params.SSH_USER) {
+            error "user name is null or empty, please check credentials_id or the SSH_USER param."
         }
 
-        if(!password && params.PASSWORD) {
-            error "password is null or empty, please check credentials_id."
-        }*/
+        if(!identityFile && params.SSH_FILE) {
+            error "KeyFile is null or empty, please check credentials_id or the SSH_FILE parameneter."
+        }
+
+        if(!passphrase && params.SSH_PASS) {
+            error "password is null or empty, please check credentials_id or the SSH_PASS parameter."
+        }
 
         yaml.steps.each { stageName, step ->
-            step.each {
-                def remoteGroups = [:]
-                def allRemotes = []
+            if(stageName ==~ /${stages}/) {
+                echo "${stageName} mathed stages pattern"
+                step.each {
+                    def remoteGroups = [:]
+                    def allRemotes = []
 
-                it.remote_groups.each {
-                    if(!yaml.remote_groups."$it") {
-                        error "remotes groups are empty/invalid for the given stage: ${stageName}, command group: ${it}. Please check yml."
-                    }
-                    remoteGroups[it] = yaml.remote_groups."$it"
-                }
-
-                // Merge all the commands for the given group
-                def commandGroups = [:]
-                it.command_groups.each {
-                    if(!yaml.command_groups."$it") {
-                        error "command groups are empty/invalid for the given stage: ${stageName}, command group: ${it}. Please check yml."
-                    }
-                    commandGroups[it] = yaml.command_groups."$it"
-                }
-
-                def isSudo = false
-                // Append user and identity for all the remotes.
-                remoteGroups.each { remoteGroupName, remotes ->
-                    allRemotes += remotes.collect { remote ->
-                        if(!remote.host) {
-                            throw IllegalArgumentException("host missing for one of the nodes in ${remoteGroupName}")
+                    it.remote_groups.each {
+                        if(!yaml.remote_groups."$it") {
+                            error "remotes groups are empty/invalid for the given stage: ${stageName}, command group: ${it}. Please check yml."
                         }
-                        if(!remote.name)
-                            remote.name = remote.host
+                        remoteGroups[it] = yaml.remote_groups."$it"
+                    }
 
-                        // TODO change the params
-                        if(params.SSH_USER) {
-                            remote.user = params.SSH_USER
-                            remote.password = params.PASSWORD
-                            isSudo = true
-                        } else {
-                            remote.user = user
-                            remote.identityFile = identityFile
-                            remote.passphrase = passphrase
+                    // Merge all the commands for the given group
+                    def commandGroups = [:]
+                    it.command_groups.each {
+                        if(!yaml.command_groups."$it") {
+                            error "command groups are empty/invalid for the given stage: ${stageName}, command group: ${it}. Please check yml."
                         }
+                        commandGroups[it] = yaml.command_groups."$it"
+                    }
 
-                        // For now we are settings host checking off.
-                        remote.allowAnyHosts = true
-
-                        // TODO Cchange gateway
-                        remote.groupName = remoteGroupName
-                        if(yaml.gateway) {
-                            def gateway = [:]
-                            gateway.name = yaml.gateway.name
-                            gateway.host = yaml.gateway.host
-                            gateway.allowAnyHosts = true
+                    def isSudo = false
+                    // Append user and identity for all the remotes.
+                    remoteGroups.each { remoteGroupName, remotes ->
+                        allRemotes += remotes.collect { remote ->
+                            if(!remote.host) {
+                                throw IllegalArgumentException("host missing for one of the nodes in ${remoteGroupName}")
+                            }
+                            if(!remote.name)
+                                remote.name = remote.host
 
                             if(params.SSH_USER) {
-                                gateway.user = params.SSH_USER
-                                gateway.password = params.PASSWORD
+                                remote.user = params.SSH_USER
+                                remote.identityFile = params.SSH_FILE
+                                remote.passphrase = params.SSH_PASS
+                                isSudo = true
                             } else {
-                                gateway.user = userName
-                                gateway.password = password
+                                remote.user = user
+                                remote.identityFile = identityFile
+                                remote.passphrase = passphrase
                             }
 
-                            remote.gateway = gateway
-                        }
-                        remote
-                    }
-                }
+                            // For now we are settings host checking off.
+                            remote.allowAnyHosts = true
 
-                // Execute in parallel.
-                if(allRemotes) {
-                    if(allRemotes.size() > 1) {
-                        def stepsForParallel = allRemotes.collectEntries { remote ->
-                            ["${remote.groupName}-${remote.name}" : transformIntoStep(dryRun, stageName, remote.groupName, remote, commandGroups, isSudo, yaml.config, failedRemotes, retriedRemotes)]
+                            remote.groupName = remoteGroupName
+                            if(yaml.gateway) {
+                                def gateway = [:]
+                                gateway.name = yaml.gateway.name
+                                gateway.host = yaml.gateway.host
+                                gateway.allowAnyHosts = true
+
+                                if(params.SSH_USER) {
+                                    gateway.user = params.SSH_USER
+                                    gateway.indentityFile = params.SSH_FILE
+                                    gateway.passphrase = params.SSH_PASS
+                                } else {
+                                    gateway.user = user
+                                    gateway.identityFile = identityFile
+                                    gateway.passphrase = passphrase
+                                }
+
+                                remote.gateway = gateway
+                            }
                         }
-                        stage(stageName + " \u2609 Size: ${allRemotes.size()}") {
-                            parallel stepsForParallel
-                        }
-                    } else {
-                        def remote = allRemotes.first()
-                        stage(stageName + "\n" + remote.groupName + "-" + remote.name) {
-                            transformIntoStep(dryRun, stageName, remote.groupName, remote, commandGroups, isSudo, yaml.config, failedRemotes, retriedRemotes).call()
+                    }
+
+                    // Execute in parallel.
+                    if(allRemotes) {
+                        if(allRemotes.size() > 1) {
+                            def stepsForParallel = allRemotes.collectEntries { remote ->
+                                ["${remote.groupName}-${remote.name}" : transformIntoStep(dryRun, stageName, remote.groupName, remote, commandGroups, isSudo, yaml.config, failedRemotes, retriedRemotes)]
+                            }
+                            stage(stageName + " \u2609 Size: ${allRemotes.size()}") {
+                                parallel stepsForParallel
+                            }
+                        } else {
+                            def remote = allRemotes.first()
+                            stage(stageName + "\n" + remote.groupName + "-" + remote.name) {
+                                transformIntoStep(dryRun, stageName, remote.groupName, remote, commandGroups, isSudo, yaml.config, failedRemotes, retriedRemotes).call()
+                            }
                         }
                     }
                 }
