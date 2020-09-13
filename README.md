@@ -6,8 +6,12 @@ More about on this [blog](https://engineering.cerner.com/blog/ssh-steps-for-jenk
 
 This is just an example library.
 
+## fork
 
-Sample YML file:
+Forked with the objetive to allow the deploy script to use ssh credentials
+instead of username and password ones
+
+## Sample YML file:
 
 
 ```yml

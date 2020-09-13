@@ -18,15 +18,16 @@ def call(yaml, boolean dryRun) {
     def failedRemotes = []
     def retriedRemotes = []
 
-    withCredentials([usernamePassword(credentialsId: yaml.config.credentials_id, passwordVariable: 'password', usernameVariable: 'userName')]) {
+    /* withCredentials([usernamePassword(credentialsId: yaml.config.credentials_id, passwordVariable: 'password', usernameVariable: 'userName')]) { */
+    withCredentials([sshUserPrivateKey(credentialsId: yaml.config.credentials_id, keyFileVariable: 'identityFile', passphraseVariable: 'passphrase', usernameVariable: 'user')]) {
 
-        if(!userName && params.SSH_USER) {
+        /*if(!userName && params.SSH_USER) {
             error "userName is null or empty, please check credentials_id."
         }
 
         if(!password && params.PASSWORD) {
             error "password is null or empty, please check credentials_id."
-        }
+        }*/
 
         yaml.steps.each { stageName, step ->
             step.each {
@@ -64,8 +65,9 @@ def call(yaml, boolean dryRun) {
                             remote.password = params.PASSWORD
                             isSudo = true
                         } else {
-                            remote.user = userName
-                            remote.password = password
+                            remote.user = user
+                            remote.identityFile = identityFile
+                            remote.passphrase = passphrase
                         }
 
                         // For now we are settings host checking off.
