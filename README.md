@@ -9,14 +9,26 @@ This is just an example library.
 ## fork
 
 Forked with the objetive to allow the deploy script to use ssh credentials
-instead of username and password ones
+instead of username and password ones.
+
+This is in my non security expert opinion, more secure and cleaner,
+as the same private key can be used to set up to gain secure access
+to multiple servers without having to set up the same password on all of them
+
+## ssh keys
+
+This will now accept a `SSH Username with private key` type of credential,
+but it will have to be from the "older" OpenSHH format, otherwise it will fail
+you can generate a key of that kind using
+
+    ssh-keygen -t rsa -b 4096 -m PEM
 
 ## Sample YML file:
 
 
 ```yml
 config:
-  credentials_id: sshUserAcct
+  credentials_id: JENKINS_SSH
   # retry_with_prompt: true
   # retry_and_return: true
   # retry_count: 3
