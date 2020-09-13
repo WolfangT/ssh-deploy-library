@@ -18,9 +18,9 @@ def call(yaml, boolean dryRun) {
     def failedRemotes = []
     def retriedRemotes = []
 
-    /* withCredentials([usernamePassword(credentialsId: yaml.config.credentials_id, passwordVariable: 'password', usernameVariable: 'userName')]) { */
     withCredentials([sshUserPrivateKey(credentialsId: yaml.config.credentials_id, keyFileVariable: 'identityFile', passphraseVariable: 'passphrase', usernameVariable: 'user')]) {
 
+        // TODO reinstante checks
         /*if(!userName && params.SSH_USER) {
             error "userName is null or empty, please check credentials_id."
         }
@@ -60,6 +60,7 @@ def call(yaml, boolean dryRun) {
                         if(!remote.name)
                             remote.name = remote.host
 
+                        // TODO change the params
                         if(params.SSH_USER) {
                             remote.user = params.SSH_USER
                             remote.password = params.PASSWORD
@@ -73,6 +74,7 @@ def call(yaml, boolean dryRun) {
                         // For now we are settings host checking off.
                         remote.allowAnyHosts = true
 
+                        // TODO Cchange gateway
                         remote.groupName = remoteGroupName
                         if(yaml.gateway) {
                             def gateway = [:]
