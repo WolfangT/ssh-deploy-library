@@ -4,6 +4,10 @@ def call(String yamlName) {
     sshDeploy(yamlName, ".*", false)
 }
 
+def call(String yamlName, String stages) {
+    sshDeploy(yamlName, stages, false)
+}
+
 def call(String yamlName, String stages, boolean dryRun) {
     def yaml = readYaml file: yamlName
     sshDeploy(yaml, stages, dryRun)
