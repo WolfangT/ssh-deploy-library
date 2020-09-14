@@ -37,7 +37,7 @@ def call(yaml, String stages, boolean dryRun) {
         }
 
         yaml.steps.findAll { stageName, step -> stageName ==~ /${stages}/ }.each { stageName, step ->
-            echo "${stageName} mathed stages pattern"
+            echo "${stageName} matched stages pattern"
             step.each {
                 def remoteGroups = [:]
                 def allRemotes = []
